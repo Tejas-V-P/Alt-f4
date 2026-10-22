@@ -5,14 +5,14 @@ const connectDB = async () => {
     const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
     if (!mongoUri) {
       console.error('MONGO_URI is not defined in environment variables.');
-      process.exit(1);
+      return;
     }
 
     const conn = await mongoose.connect(mongoUri);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
-    process.exit(1);
+    console.error('Note: If deployed on Render/Railway/AWS, ensure MongoDB Atlas Network Access has 0.0.0.0/0 whitelisted.');
   }
 };
 
