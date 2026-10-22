@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Plus, Trash2, Clock, MapPin, CheckCircle2, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Clock, MapPin, CheckCircle2, X, ExternalLink, CalendarPlus, Download } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
+import { buildGoogleCalendarUrl, downloadIcsFile } from '../utils/calendarUtils';
 
 const EVENT_TYPES = [
   'Online Assessment',
@@ -13,6 +14,7 @@ const PlacementCalendar = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [syncToGoogleOnSave, setSyncToGoogleOnSave] = useState(true);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -44,7 +46,15 @@ const PlacementCalendar = () => {
     if (!formData.title.trim() || !formData.companyName.trim() || !formData.eventDate) return;
 
     try {
-      await axiosClient.post('/prep/events', formData);
+      const payload = { ...formData };
+      await axiosClient.post('/prep/events', payload);
+      
+      // If user opted to add to Google Calendar in real time, open Google Calendar immediately
+      if (syncToGoogleOnSave) {
+        const gcalUrl = buildGoogleCalendarUrl(payload);
+        window.open(gcalUrl, '_blank', 'noopener,noreferrer');
+      }
+
       setFormData({
         title: '',
         companyName: '',
@@ -155,6 +165,30 @@ const PlacementCalendar = () => {
                     </p>
                   )}
                 </div>
+
+                <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    title="Download .ics file (Outlook, Apple Calendar)"
+                    onClick={() => downloadIcsFile(ev)}
+                    style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                  >
+                    <Download size={14} />
+                    .ICS
+                  </button>
+                  <a
+                    href={buildGoogleCalendarUrl(ev)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary btn-sm"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}
+                  >
+                    <CalendarPlus size={14} />
+                    Google Calendar
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
               </div>
             );
           })}
@@ -245,6 +279,38 @@ const PlacementCalendar = () => {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
+              </div>
+
+              {/* Real-time Google Calendar Option */}
+              <div
+                style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--border-radius)',
+                  padding: '0.85rem 1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setSyncToGoogleOnSave(!syncToGoogleOnSave)}
+              >
+                <input
+                  type="checkbox"
+                  id="syncGoogleCal"
+                  checked={syncToGoogleOnSave}
+                  onChange={(e) => setSyncToGoogleOnSave(e.target.checked)}
+                  style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer' }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <label htmlFor="syncGoogleCal" style={{ cursor: 'pointer', margin: 0, fontSize: '0.9rem' }}>
+                  <span style={{ fontWeight: 600, display: 'block', color: 'var(--text-main)' }}>
+                    Add directly to Google Calendar in real time
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Automatically opens Google Calendar with event details, reminders, and date/time pre-filled upon saving.
+                  </span>
+                </label>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>

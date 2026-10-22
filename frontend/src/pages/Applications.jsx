@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, Download, Edit, Trash2, Star, Calendar, MapPin, DollarSign, FileText } from 'lucide-react';
+import { Search, Filter, Plus, Download, Edit, Trash2, Star, Calendar, MapPin, DollarSign, FileText, CalendarPlus } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 import StatusBadge from '../components/StatusBadge';
 import ApplicationModal from '../components/ApplicationModal';
 import { exportToCSV } from '../utils/exportCsv';
+import { buildGoogleCalendarUrl } from '../utils/calendarUtils';
 
 const STATUS_FILTERS = [
   'All',
@@ -224,6 +225,26 @@ const Applications = () => {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                        {['Technical Interview', 'HR Interview', 'Online Assessment'].includes(app.status) && (
+                          <a
+                            href={buildGoogleCalendarUrl({
+                              title: `${app.status} - ${app.role}`,
+                              companyName: app.companyName,
+                              eventType: app.status,
+                              eventDate: app.applicationDate,
+                              time: '10:00 AM',
+                              notes: app.notes,
+                              location: app.location
+                            })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary btn-sm"
+                            title="Add to Google Calendar"
+                            style={{ color: 'var(--primary)' }}
+                          >
+                            <CalendarPlus size={14} />
+                          </a>
+                        )}
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => openEditModal(app)}
