@@ -25,20 +25,23 @@ const PlacementCalendar = () => {
     notes: ''
   });
 
-  const fetchEvents = async () => {
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const fetchEvents = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await axiosClient.get('/prep/events');
       setEvents(res.data.events || []);
     } catch (err) {
       console.error('Error fetching events:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
+    fetchEvents(true);
   }, []);
 
   const handleAddEvent = async (e) => {
@@ -46,8 +49,18 @@ const PlacementCalendar = () => {
     if (!formData.title.trim() || !formData.companyName.trim() || !formData.eventDate) return;
 
     try {
+      setSubmitting(true);
       const payload = { ...formData };
-      await axiosClient.post('/prep/events', payload);
+      const res = await axiosClient.post('/prep/events', payload);
+      const createdEvent = res.data?.event;
+
+      // Optimistically update events state immediately so UI updates with zero page reload
+      if (createdEvent) {
+        setEvents((prev) => [...prev, createdEvent].sort((a, b) => a.eventDate.localeCompare(b.eventDate)));
+      } else {
+        // Fallback fetch in background without showing full-page loader
+        fetchEvents(false);
+      }
       
       // If user opted to add to Google Calendar in real time, open Google Calendar immediately
       if (syncToGoogleOnSave) {
@@ -64,20 +77,27 @@ const PlacementCalendar = () => {
         notes: ''
       });
       setIsModalOpen(false);
-      fetchEvents();
     } catch (err) {
       alert('Failed to add event.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDeleteEvent = async (id) => {
-    if (window.confirm('Delete this calendar event?')) {
-      try {
-        await axiosClient.delete(`/prep/events/${id}`);
-        fetchEvents();
-      } catch (err) {
-        alert('Failed to delete event.');
-      }
+    if (!window.confirm('Delete this calendar event?')) return;
+
+    try {
+      setDeletingId(id);
+      // Optimistically remove from state instantly
+      setEvents((prev) => prev.filter((ev) => ev.id !== id && ev._id !== id));
+      await axiosClient.delete(`/prep/events/${id}`);
+    } catch (err) {
+      alert('Failed to delete event.');
+      // Re-fetch to restore state if deletion failed
+      fetchEvents(false);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -136,7 +156,13 @@ const PlacementCalendar = () => {
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.65rem', borderRadius: '9999px', background: badge.bg, color: badge.color, textTransform: 'uppercase' }}>
                       {ev.eventType}
                     </span>
-                    <button onClick={() => handleDeleteEvent(ev.id)} style={{ color: 'var(--text-subtle)', cursor: 'pointer' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEvent(ev.id || ev._id)}
+                      disabled={deletingId === (ev.id || ev._id)}
+                      title="Delete event"
+                      style={{ color: 'var(--text-subtle)', cursor: 'pointer', background: 'transparent', border: 'none', padding: '0.2rem' }}
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -317,8 +343,8 @@ const PlacementCalendar = () => {
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Save Event
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting ? 'Saving...' : 'Save Event'}
                 </button>
               </div>
             </form>
