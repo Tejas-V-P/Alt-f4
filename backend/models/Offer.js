@@ -42,6 +42,14 @@ const offerSchema = new mongoose.Schema(
       type: String,
       default: 'Hybrid'
     },
+    workTimingStart: {
+      type: String,
+      default: '09:00 AM'
+    },
+    workTimingEnd: {
+      type: String,
+      default: '06:00 PM'
+    },
     rating: {
       type: String,
       default: '4.5 / 5'

@@ -14,7 +14,7 @@ exports.getOffers = async (req, res) => {
 exports.addOffer = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { company, role, ctc, base, stocks, joiningBonus, location, workMode, rating } = req.body;
+    const { company, role, ctc, base, stocks, joiningBonus, location, workMode, workTimingStart, workTimingEnd, rating } = req.body;
 
     if (!company || !role || !ctc) {
       return res.status(400).json({ message: 'Company Name, Role, and Total CTC are required' });
@@ -24,12 +24,14 @@ exports.addOffer = async (req, res) => {
       userId,
       company: company.trim(),
       role: role.trim(),
-      ctc: ctc.trim(),
-      base: base ? base.trim() : '',
-      stocks: stocks ? stocks.trim() : '',
-      joiningBonus: joiningBonus ? joiningBonus.trim() : '',
+      ctc: String(ctc).trim(),
+      base: base ? String(base).trim() : '',
+      stocks: stocks ? String(stocks).trim() : '',
+      joiningBonus: joiningBonus ? String(joiningBonus).trim() : '',
       location: location ? location.trim() : '',
       workMode: workMode || 'Hybrid',
+      workTimingStart: workTimingStart ? workTimingStart.trim() : '09:00 AM',
+      workTimingEnd: workTimingEnd ? workTimingEnd.trim() : '06:00 PM',
       rating: rating || '4.5 / 5'
     });
 
